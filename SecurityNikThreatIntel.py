@@ -20,22 +20,22 @@ from time import sleep
 
 # This function checks to see if this script is running on Linux.
 def check_os():
-	qRadar_path = '/opt/qradar/conf/'
-	qRadar_ver = '/opt/qradar/bin/myver'
-
 	print(' Checking OS ... ')
-	if ( uname()[0] == 'Linux' ) or ( uname()[0] == 'linux'):
+	if uname()[0] in ['Linux', 'linux']:
 		#print(' Running on Linux ... ')
-		
+
 		if ( path.exists('/etc/system-release') and path.isfile('/etc/system-release') ):
 			call(['cat', '/etc/system-release'])
 		else:
 			print('\n Looks like you are running Linux. ')
 			print('\n However, I am unable to determine your version info. ')
-		
+
 		print(' \n Looking for an installed version of QRadar')
+		qRadar_path = '/opt/qradar/conf/'
 		if ( path.exists(qRadar_path) and ( path.isdir(qRadar_path)) ):
 			print(' \n looks like you are running QRadar version ... ')
+			qRadar_ver = '/opt/qradar/bin/myver'
+
 			call([qRadar_ver])
 			print(' \n Good stuff ... \n Blast off =>>>>>>> ')
 		else:
@@ -43,7 +43,7 @@ def check_os():
 			print(' This script will not work for you, it was designed to be used on box running IBM QRadar ')
 			print(' Exiting ... ')
 			exit(0)
-		
+
 		sleep(2)
 	else:
 		print(' Running this is a waste of your time. ')
@@ -86,11 +86,25 @@ def grab_ip_list():
 		print(' Preparing to download list of bad IP addresses ')
 		for link in bad_ip_list:
 			print(link)
-			call(['wget', link, '--directory-prefix='+ip_path , '--tries=2', '--continue', '--timestamping', '--timeout=5', '--random-wait', '--no-proxy', '--inet4-only'])
+			call(
+				[
+					'wget',
+					link,
+					f'--directory-prefix={ip_path}',
+					'--tries=2',
+					'--continue',
+					'--timestamping',
+					'--timeout=5',
+					'--random-wait',
+					'--no-proxy',
+					'--inet4-only',
+				]
+			)
+
 			print(' \n  %s \n retrieved successfully \n' %link )
 			sleep(2)
 	except:
-		print(' A problem occurred while downloading IP information from %s ' %link )
+		print(f' A problem occurred while downloading IP information from {link} ')
 		print(' This link may be broken. Please copy the URL and paste into a browser to ensure it is accessible')
 	else:
 		# Looks like all went well
@@ -123,11 +137,25 @@ def grab_dns_list():
 		print(' Preparing to download list of bad Domain  ')
 		for dns in bad_dns_list:
 			print(dns)
-			call(['wget', dns, '--directory-prefix='+dns_path , '--tries=2', '--continue', '--timestamping', '--timeout=5', '--random-wait', '--no-proxy', '--inet4-only'])
+			call(
+				[
+					'wget',
+					dns,
+					f'--directory-prefix={dns_path}',
+					'--tries=2',
+					'--continue',
+					'--timestamping',
+					'--timeout=5',
+					'--random-wait',
+					'--no-proxy',
+					'--inet4-only',
+				]
+			)
+
 			print(' \n  %s \n retrieved successfully \n' %dns )
 			sleep(2)
 	except:
-		print(' A problem occurred while downloading DNS information from %s ' %dns )
+		print(f' A problem occurred while downloading DNS information from {dns} ')
 		print(' This link may be broken. Please copy the URL and paste into a browser to ensure it is accessible')
 	else:
 		# Looks like all went well
@@ -252,40 +280,41 @@ def combine_dns_files():
 # This function does all the work for the IP reference set
 def verify_create_ip_reference_set():
 	reference_set_name = 'SecurityNik_IP_Darklist'
-	ip_txt = getcwd()+'/SecurityNikBadIPs.txt'
-	rows = []
-	
-	print('Checking to see if the reference set %s already exists' %reference_set_name)
-	f =open('.count.txt', 'w')
-	call(["psql", "-U", "qradar", "--command=SELECT COUNT(*) FROM reference_data WHERE name='SecurityNik_IP_Darklist'"], stdout=f )
-	f.close()
+	ip_txt = f'{getcwd()}/SecurityNikBadIPs.txt'
+	print(
+		f'Checking to see if the reference set {reference_set_name} already exists'
+	)
 
+	with open('.count.txt', 'w') as f:
+		call(["psql", "-U", "qradar", "--command=SELECT COUNT(*) FROM reference_data WHERE name='SecurityNik_IP_Darklist'"], stdout=f )
 	# Resting ... I'm tired
 	sleep(2)
-    
+
 	f = open('.count.txt', 'r')
-    	
-	for line in f.readlines():
-		rows.append(line.strip())
+
+	rows = [line.strip() for line in f]
 	#print(rows)
-	
+
 	if (rows[2].strip() != '0'):
 		print(' Looks like reference set already exists \n ')
 	else:
 		print(' Reference Set %s not found ...  %reference_set_name ')
 		print(' Looks like we will have to create this bad boy ...')
-		
+
 		try:    
 			call(['/opt/qradar/bin/ReferenceSetUtil.sh', 'create', reference_set_name , 'IP'])
 			print(' Successfully created reference set %s \n ' %reference_set_name )
 			#print(' Looks like that went well ... ' )
 		except:
 			#This does not catch any java exception that may be created
-			print(' Error occurred while creating reference set %s ' %reference_set)
-			print(' You may create the reference set %s manually if needed ' %reference_set_name )
+			print(f' Error occurred while creating reference set {reference_set} ')
+			print(
+				f' You may create the reference set {reference_set_name} manually if needed '
+			)
+
 			exit(0)
 
-	print(' Loading information into reference set %s ' %reference_set_name )
+	print(f' Loading information into reference set {reference_set_name} ')
 	try:	
 		call(['/opt/qradar/bin/ReferenceSetUtil.sh', 'load', reference_set_name , ip_txt ])
 		print(' \n You may need to verify that you have rules created to use %s ' %reference_set_name )
@@ -299,40 +328,41 @@ def verify_create_ip_reference_set():
 # This function creates the DNS reference set
 def verify_create_dns_reference_set():
 	reference_set_name = 'SecurityNik_DNS_Darklist'
-	dns_txt = getcwd()+'/SecurityNikBadDomains.txt'
-	dns_rows = []
-	
-	print('Checking to see if the reference set %s already exists' %reference_set_name)
-	f = open('.count.txt', 'w')
-	call(["psql", "-U", "qradar", "--command=SELECT COUNT(*) FROM reference_data WHERE name='SecurityNik_DNS_Darklist'"], stdout=f )
-	f.close()
+	dns_txt = f'{getcwd()}/SecurityNikBadDomains.txt'
+	print(
+		f'Checking to see if the reference set {reference_set_name} already exists'
+	)
 
+	with open('.count.txt', 'w') as f:
+		call(["psql", "-U", "qradar", "--command=SELECT COUNT(*) FROM reference_data WHERE name='SecurityNik_DNS_Darklist'"], stdout=f )
 	# Taking a nap ...
 	sleep(2)
 
 	f = open('.count.txt', 'r')
-	for line in f.readlines():
-		dns_rows.append(line.strip())
+	dns_rows = [line.strip() for line in f]
 	#print(dns_rows)
 
 	if (dns_rows[2].strip() != '0'):
 		print(' Looks like reference set already exists \n ')
 	else:
-		print(' Reference Set %s not found ' %reference_set_name )
+		print(f' Reference Set {reference_set_name} not found ')
 		print(' Looks like we will have to create this bad boy ...')
 		try:
 			call(['/opt/qradar/bin/ReferenceSetUtil.sh', 'create', reference_set_name , 'ALN'])
-			print(' Successfully created reference set %s ' %reference_set_name )
-			
-			#print(' Looks like that went well ... ' )
+			print(f' Successfully created reference set {reference_set_name} ')
+					
+					#print(' Looks like that went well ... ' )
 		except:
 			# This does not catch any java exception that may be created
-			print(' Error occurred while creating reference set %s ' %reference_set)
-			print(' You may create the reference set %s manually if needed ' %reference_set_name )
+			print(f' Error occurred while creating reference set {reference_set} ')
+			print(
+				f' You may create the reference set {reference_set_name} manually if needed '
+			)
+
 			exit(0)
-				
-	print(' Loading information into reference set %s ' %reference_set_name )
-		
+
+	print(f' Loading information into reference set {reference_set_name} ')
+
 	try:
 		call(['/opt/qradar/bin/ReferenceSetUtil.sh', 'load', reference_set_name , dns_txt ])
 		print(' \n You may need to verify that you have rules created to use %s ' %reference_set_name )
